@@ -1,6 +1,6 @@
 Name:     	libevhtp
 Version:  	1.2.16
-Release:  	2
+Release:  	3
 Summary:  	Libevent based HTTP API.
 
 License:  	BSD3
@@ -19,7 +19,7 @@ low memory footprint + use of regular expressions for routing + out-of-the box H
 This package contains the runtime library.
 
 %package 	devel
-Summary: 	Headers for developing programs that will use %{name} 
+Summary: 	Headers for developing programs that will use %{name}
 Requires: 	%{name} = %{version}-%{release}
 
 %description 	devel
@@ -29,7 +29,7 @@ applications that want to make use of %{name}.
 %global debug_package %{nil}
 
 %prep
-%autosetup -n %{name}-%{version} -p1 
+%autosetup -n %{name}-%{version} -p1
 
 %build
 mkdir -p build
@@ -49,6 +49,7 @@ find %{buildroot} -name '*.cmake' -exec rm -f {} ';'
 
 %files
 %defattr(-,root,root)
+%license LICENSE
 /usr/lib/%{name}.so.*
 
 %files devel
@@ -59,6 +60,12 @@ find %{buildroot} -name '*.cmake' -exec rm -f {} ';'
 /usr/lib/pkgconfig/evhtp.pc
 
 %changelog
+* Mon Oct 21 2019 openEuler Buildteam <buildteam@openeuler.org> - 1.2.16-3
+- Type:enhancement
+- Id:NA
+- SUG:NA
+- DESC:add LICENSE file
+
 * Sun Sep 15 2019 openEuler Buildteam <buildteam@openeuler.org> - 1.2.16-2
 - Package init
 
