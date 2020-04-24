@@ -1,0 +1,30 @@
+From 4c4731a5295a60029c27f98212ceeed0c4a373d8 Mon Sep 17 00:00:00 2001
+From: chenxin <kepler.chenxin@huawei.com>
+Date: Wed, 4 Sep 2019 15:56:00 +0800
+Subject: [PATCH 4/4] Use shared library instead static one.
+
+There is NO option EVHTP_BUILD_SHARED in options.cmake any more
+in new version. so modify add_library directly.
+
+Change-Id: I6cf034e84ca696ac1c065cbc1706b278c4447fc9
+Signed-off-by: chenxin <kepler.chenxin@huawei.com>
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 481ddd0..fbb0f50 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -110,7 +110,7 @@ elseif(EVHTP_ALLOCATOR STREQUAL "tcmalloc")
+     endif()
+ endif()
+ 
+-add_library(evhtp ${LIBEVHTP_SOURCE_FILES})
++add_library(evhtp SHARED ${LIBEVHTP_SOURCE_FILES})
+ target_link_libraries(evhtp PUBLIC ${LIBEVHTP_EXTERNAL_LIBS})
+ target_include_directories(evhtp PUBLIC ${LIBEVHTP_EXTERNAL_INCLUDES})
+ 
+-- 
+1.8.3.1
+

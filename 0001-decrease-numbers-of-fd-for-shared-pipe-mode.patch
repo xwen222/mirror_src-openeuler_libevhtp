@@ -1,0 +1,36 @@
+From a1626a39c9413b9bf9aa08086351c8119cc051e6 Mon Sep 17 00:00:00 2001
+From: chenxin <kepler.chenxin@huawei.com>
+Date: Wed, 4 Sep 2019 14:59:51 +0800
+Subject: [PATCH 1/4] decrease numbers of fd for shared pipe mode
+
+Change-Id: I635aa2db9bdab028e3781b0ac392ab4c56b46dae
+Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
+Signed-off-by: chenxin <kepler.chenxin@huawei.com>
+---
+ thread.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/thread.c b/thread.c
+index dfddc7e..96065df 100644
+--- a/thread.c
++++ b/thread.c
+@@ -328,6 +328,16 @@ evthr_pool_free(evthr_pool_t * pool)
+         evthr_free(thread);
+     }
+ 
++#ifdef EVTHR_SHARED_PIPE
++    if (pool->rdr > 0) {
++        close(pool->rdr);
++    }
++
++    if (pool->wdr > 0) {
++        close(pool->wdr);
++    }
++#endif
++
+     free(pool);
+ }
+ 
+-- 
+1.8.3.1
+
