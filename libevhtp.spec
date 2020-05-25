@@ -1,13 +1,15 @@
 Name:     	libevhtp
-Version:  	1.2.16
-Release:  	3
+Version:  	1.2.18
+Release:  	1
 Summary:  	Libevent based HTTP API.
 
 License:  	BSD3
 URL:      	https://criticalstack.com
-Source0:  	https://github.com/criticalstack/%{name}/archive/%{name}-%{version}.tar.gz
-Patch9000:   	0001-support-dynamic-threads.patch
-Patch9001:   	0002-close-openssl.patch
+Source0:  	%{name}-%{version}.tar.gz
+Patch9000:  0001-decrease-numbers-of-fd-for-shared-pipe-mode.patch
+Patch9001:  0002-evhtp-enable-dynamic-thread-pool.patch
+Patch9002:  0003-close-open-ssl.-we-do-NOT-use-it-in-lcrd.patch
+Patch9003:  0004-Use-shared-library-instead-static-one.patch
 
 BuildRequires: 	git gcc-c++ cmake libevent-devel
 
@@ -56,16 +58,11 @@ find %{buildroot} -name '*.cmake' -exec rm -f {} ';'
 %defattr(-,root,root)
 %{_includedir}/*.h
 %{_includedir}/evhtp/*.h
+%{_includedir}/evhtp/sys/*.h
 /usr/lib/%{name}.so
 /usr/lib/pkgconfig/evhtp.pc
 
 %changelog
-* Mon Oct 21 2019 openEuler Buildteam <buildteam@openeuler.org> - 1.2.16-3
-- Type:enhancement
-- Id:NA
-- SUG:NA
-- DESC:add LICENSE file
-
-* Sun Sep 15 2019 openEuler Buildteam <buildteam@openeuler.org> - 1.2.16-2
+* Wed Apr 15 2020 openEuler Buildteam <buildteam@openeuler.org> - 1.2.18-1
 - Package init
 
