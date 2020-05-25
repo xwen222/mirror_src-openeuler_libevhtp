@@ -1,8 +1,39 @@
+From b3733e9fe70d9ac101a2ac79ee4568942a3dd874 Mon Sep 17 00:00:00 2001
+From: chenxin <kepler.chenxin@huawei.com>
+Date: Wed, 4 Sep 2019 15:52:20 +0800
+Subject: [PATCH 2/4] evhtp: enable dynamic thread pool
+
+Signed-off-by: tanyifeng <tanyifeng1@huawei.com>
+Signed-off-by: chenxin <kepler.chenxin@huawei.com>
+
+Conflicts:
+	thread.c
+
+Change-Id: If3f154de82448d002f0e3c90efaaf73394d6734b
+---
+ evhtp.c                |  47 ++++++
+ include/evhtp/evhtp.h  |  22 +++
+ include/evhtp/thread.h |   6 +
+ thread.c               | 415 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ 4 files changed, 487 insertions(+), 3 deletions(-)
+
 diff --git a/evhtp.c b/evhtp.c
-index 6eaf319..220c044 100644
+index 8d34676..2ecb619 100644
 --- a/evhtp.c
 +++ b/evhtp.c
-@@ -4595,6 +4595,37 @@ htp__use_threads_(evhtp_t * htp,
+@@ -2824,6 +2824,11 @@ htp__accept_cb_(struct evconnlistener * serv, int fd, struct sockaddr * s, int s
+ 
+     log_debug("fd = %d, conn = %p", fd, connection);
+ 
++    if (evhtp_unlikely(sl <= 0)) {
++        evhtp_safe_free(connection, evhtp_connection_free);
++        return;
++    }
++
+     connection->saddr = htp__malloc_(sl);
+ 
+     if (evhtp_unlikely(connection->saddr == NULL)) {
+@@ -4590,6 +4595,37 @@ htp__use_threads_(evhtp_t * htp,
      return 0;
  }
  
@@ -40,7 +71,7 @@ index 6eaf319..220c044 100644
  int
  evhtp_use_threads(evhtp_t * htp, evhtp_thread_init_cb init_cb,
                    int nthreads, void * arg)
-@@ -4611,6 +4642,17 @@ evhtp_use_threads_wexit(evhtp_t * htp,
+@@ -4606,6 +4642,17 @@ evhtp_use_threads_wexit(evhtp_t * htp,
      return htp__use_threads_(htp, init_cb, exit_cb, nthreads, arg);
  }
  
@@ -59,14 +90,13 @@ index 6eaf319..220c044 100644
  
  #ifndef EVHTP_DISABLE_EVTHR
 diff --git a/include/evhtp/evhtp.h b/include/evhtp/evhtp.h
-index 344f58c..8061bba 100644
+index 9bcee44..fbe79ba 100644
 --- a/include/evhtp/evhtp.h
 +++ b/include/evhtp/evhtp.h
-@@ -880,6 +880,28 @@ EVHTP_EXPORT int evhtp_use_threads_wexit(evhtp_t *,
-     evhtp_thread_exit_cb,
+@@ -871,6 +871,28 @@ EVHTP_EXPORT int evhtp_use_threads_wexit(evhtp_t *,
      int nthreads, void * arg);
  
-+/**
+ /**
 + * @brief Enable dynamic thread-pool support for an evhtp_t context. Every connection is
 + *       distributed to a thread. An optional "on-start" callback can
 + *       be set which allows you to manipulate the thread-specific inforation
@@ -88,9 +118,10 @@ index 344f58c..8061bba 100644
 +                        int nthreads_keep, int nthreads_limit,
 +                        int nrequest_limit, void * arg);
 +
- /**
++/**
   * @brief generates all the right information for a reply to be sent to the client
   *
+  * @param request
 diff --git a/include/evhtp/thread.h b/include/evhtp/thread.h
 index 7479aa8..61058a1 100644
 --- a/include/evhtp/thread.h
@@ -129,7 +160,7 @@ index 7479aa8..61058a1 100644
  #ifdef __cplusplus
  }
 diff --git a/thread.c b/thread.c
-index 7659cee..37bdeaa 100644
+index 96065df..1570b69 100644
 --- a/thread.c
 +++ b/thread.c
 @@ -2,6 +2,7 @@
@@ -140,11 +171,7 @@ index 7659cee..37bdeaa 100644
  #include <limits.h>
  #ifndef WIN32
  #include <sys/queue.h>
-@@ -15,9 +16,11 @@
- 
- #include "internal.h"
- #include "evhtp/thread.h"
-+#include "log.h"
+@@ -19,6 +20,7 @@
  
  typedef struct evthr_cmd        evthr_cmd_t;
  typedef struct evthr_pool_slist evthr_pool_slist_t;
@@ -152,7 +179,7 @@ index 7659cee..37bdeaa 100644
  
  struct evthr_cmd {
      uint8_t  stop;
-@@ -26,6 +29,13 @@ struct evthr_cmd {
+@@ -27,6 +29,13 @@ struct evthr_cmd {
  } __attribute__((packed));
  
  TAILQ_HEAD(evthr_pool_slist, evthr);
@@ -166,7 +193,7 @@ index 7659cee..37bdeaa 100644
  
  struct evthr_pool {
  #ifdef EVTHR_SHARED_PIPE
-@@ -34,6 +44,28 @@ struct evthr_pool {
+@@ -35,6 +44,28 @@ struct evthr_pool {
  #endif
      int                nthreads;
      evthr_pool_slist_t threads;
@@ -195,7 +222,7 @@ index 7659cee..37bdeaa 100644
  };
  
  struct evthr {
-@@ -53,6 +85,7 @@ struct evthr {
+@@ -54,6 +85,7 @@ struct evthr {
      int            pool_rdr;
      struct event * shared_pool_ev;
  #endif
@@ -203,7 +230,7 @@ index 7659cee..37bdeaa 100644
      TAILQ_ENTRY(evthr) next;
  };
  
-@@ -91,7 +124,7 @@ _evthr_loop(void * args) {
+@@ -94,7 +126,7 @@ _evthr_loop(void * args)
      evthr_t * thread;
  
      if (!(thread = (evthr_t *)args)) {
@@ -212,14 +239,15 @@ index 7659cee..37bdeaa 100644
      }
  
      if (thread == NULL || thread->thr == NULL) {
-@@ -133,6 +166,92 @@ _evthr_loop(void * args) {
+@@ -139,6 +171,112 @@ _evthr_loop(void * args)
      pthread_exit(NULL);
  } /* _evthr_loop */
  
 +static void *
 +_evthr_dynamic_loop(void * args) {
-+    evthr_t * thread = NULL;
-+    evthr_pool_t * pool = NULL;
++    evthr_t * thread;
++    evthr_pool_t * pool;
++    int ret;
 +
 +    if (!(thread = (evthr_t *)args)) {
 +        pthread_exit(NULL);
@@ -237,13 +265,19 @@ index 7659cee..37bdeaa 100644
 +
 +    event_add(thread->event, NULL);
 +
-+    pthread_mutex_lock(&thread->lock);
++    ret = pthread_mutex_lock(&thread->lock);
++    if (ret < 0) {
++        pthread_exit(NULL);
++    }
 +    if (thread->init_cb != NULL) {
 +        (thread->init_cb)(thread, thread->arg);
 +    }
 +    pthread_mutex_unlock(&thread->lock);
 +
-+    pthread_mutex_lock(&pool->lock);
++    ret = pthread_mutex_lock(&pool->lock);
++    if (ret < 0) {
++        pthread_exit(NULL);
++    }
 +
 +    for (;;) {
 +        int retval = 0;
@@ -255,6 +289,7 @@ index 7659cee..37bdeaa 100644
 +            }
 +            pool->nthreads_wait++;
 +            TAILQ_INSERT_TAIL(&pool->wait_threads, thread, next);
++            //fprintf(stderr, "wait %p\n", thread);
 +            pthread_cond_wait(&pool->wait_cv, &pool->lock);
 +            pool->nthreads_wait--;
 +        }
@@ -266,15 +301,22 @@ index 7659cee..37bdeaa 100644
 +            pool->nrequest--;
 +            pthread_mutex_unlock(&pool->lock);
 +
++            //fprintf(stderr, "send cb %p\n", cb);
 +            evthr_pool_callback_defer(thread, cb->func, cb->arg);
 +            free(cb);
 +
++            //fprintf(stderr, "exec %p\n", thread);
 +            while(!retval && cnt != 1) {
 +                retval = event_base_loop(thread->evbase, EVLOOP_ONCE);
++                //cnt++;
 +                cnt = event_base_get_num_events(thread->evbase, EVENT_BASE_COUNT_ADDED);
++                //fprintf(stderr, "thread:%p, retval:%d, cnt:%d\n", thread, retval, cnt);
 +            }
 +
-+            pthread_mutex_lock(&pool->lock);
++            ret = pthread_mutex_lock(&pool->lock);
++            if (ret < 0) {
++                pthread_exit(NULL);
++            }
 +        }
 +
 +        if (pool->shutdown) {
@@ -284,12 +326,16 @@ index 7659cee..37bdeaa 100644
 +
 +    pool->nthreads_now--;
 +
-+    pthread_mutex_lock(&thread->lock);
++    ret = pthread_mutex_lock(&thread->lock);
++    if (ret <0 ) {
++        goto skip_exit_cb;
++    }
 +    if (thread->exit_cb != NULL) {
 +        (thread->exit_cb)(thread, thread->arg);
 +    }
 +    pthread_mutex_unlock(&thread->lock);
 +
++skip_exit_cb:
 +    if (thread->err == 1) {
 +        fprintf(stderr, "FATAL ERROR!\n");
 +    }
@@ -298,14 +344,15 @@ index 7659cee..37bdeaa 100644
 +    TAILQ_INSERT_TAIL(&pool->dead_threads, thread, next);
 +
 +    pthread_mutex_unlock(&pool->lock);
++    //fprintf(stderr, "thread exit:%p\n", thread);
 +
 +    pthread_exit(NULL);
 +} /* _evthr_loop */
 +
  evthr_res
- evthr_defer(evthr_t * thread, evthr_cb cb, void * arg) {
-     evthr_cmd_t cmd = {
-@@ -258,6 +377,28 @@ evthr_start(evthr_t * thread) {
+ evthr_defer(evthr_t * thread, evthr_cb cb, void * arg)
+ {
+@@ -275,6 +413,28 @@ evthr_start(evthr_t * thread)
      return 0;
  }
  
@@ -332,19 +379,22 @@ index 7659cee..37bdeaa 100644
 +}
 +
  void
- evthr_free(evthr_t * thread) {
-     if (thread == NULL) {
-@@ -280,35 +421,73 @@ evthr_free(evthr_t * thread) {
-         event_free(thread->event);
+ evthr_free(evthr_t * thread)
+ {
+@@ -284,10 +444,12 @@ evthr_free(evthr_t * thread)
+ 
+     if (thread->rdr > 0) {
+         close(thread->rdr);
++        thread->rdr = -1;
      }
  
-+#ifdef EVTHR_SHARED_PIPE
-+    if (thread->shared_pool_ev) {
-+        event_free(thread->shared_pool_ev);
-+    }
-+#endif
-+
-     if (thread->evbase) {
+     if (thread->wdr > 0) {
+         close(thread->wdr);
++        thread->wdr = -1;
+     }
+ 
+     if (thread->thr) {
+@@ -309,6 +471,8 @@ evthr_free(evthr_t * thread)
          event_base_free(thread->evbase);
      }
  
@@ -353,14 +403,14 @@ index 7659cee..37bdeaa 100644
      free(thread);
  } /* evthr_free */
  
- void
- evthr_pool_free(evthr_pool_t * pool) {
--    evthr_t * thread;
+@@ -316,25 +480,46 @@ void
+ evthr_pool_free(evthr_pool_t * pool)
+ {
+     evthr_t * thread;
 -    evthr_t * save;
-+    evthr_t * thread = NULL;
-+    evthr_t * thread_save = NULL;
-+    evthr_pool_cb_t * callback = NULL;
-+    evthr_pool_cb_t * callback_save = NULL;
++    evthr_t * thread_save;
++    evthr_pool_cb_t * callback;
++    evthr_pool_cb_t * callback_save;
  
      if (pool == NULL) {
          return;
@@ -390,45 +440,36 @@ index 7659cee..37bdeaa 100644
 +        pthread_mutex_destroy(&pool->lock);
 +    }
 +
-+#ifdef EVTHR_SHARED_PIPE
-+    if (pool->rdr > 0) {
-+        close(pool->rdr);
-+    }
-+
-+    if (pool->wdr > 0) {
-+        close(pool->wdr);
-+    }
-+#endif
-+
-     free(pool);
- }
+ #ifdef EVTHR_SHARED_PIPE
+     if (pool->rdr > 0) {
+         close(pool->rdr);
++        pool->rdr = -1;
+     }
  
- evthr_res
- evthr_pool_stop(evthr_pool_t * pool) {
--    evthr_t * thr;
--    evthr_t * save;
-+    evthr_t * thr = NULL;
-+    evthr_t * save = NULL;
-+    struct timespec sleeptime;
+     if (pool->wdr > 0) {
+         close(pool->wdr);
++        pool->wdr = -1;
+     }
+ #endif
  
-     if (pool == NULL) {
-         return EVTHR_RES_FATAL;
-@@ -318,6 +497,29 @@ evthr_pool_stop(evthr_pool_t * pool) {
+@@ -355,6 +540,31 @@ evthr_pool_stop(evthr_pool_t * pool)
          evthr_stop(thr);
      }
  
 +    if (pool->dynamic) {
-+        pthread_mutex_lock(&pool->lock);
++        if (pthread_mutex_lock(&pool->lock) < 0) {
++            return EVTHR_RES_FATAL;
++        }
 +        pool->shutdown = 1;
 +        pthread_cond_broadcast(&pool->wait_cv);
 +        pthread_cond_broadcast(&pool->shutdown_cv);
 +        pthread_mutex_unlock(&pool->lock);
 +
 +wait_for_exit:
-+        sleeptime.tv_sec = 0;
-+        sleeptime.tv_nsec = 100 * 1000 * 1000;
-+        (void)nanosleep(&sleeptime, NULL);
-+        pthread_mutex_lock(&pool->lock);
++        usleep(100 * 1000);
++        if (pthread_mutex_lock(&pool->lock) < 0) {
++            return EVTHR_RES_FATAL;
++        }
 +        if (pool->nthreads_now != 0) {
 +            pthread_mutex_unlock(&pool->lock);
 +            goto wait_for_exit;
@@ -443,7 +484,7 @@ index 7659cee..37bdeaa 100644
      return EVTHR_RES_OK;
  }
  
-@@ -330,12 +532,17 @@ evthr_pool_defer(evthr_pool_t * pool, evthr_cb cb, void * arg) {
+@@ -378,6 +588,10 @@ evthr_pool_defer(evthr_pool_t * pool, evthr_cb cb, void * arg)
          .stop = 0
      };
  
@@ -454,29 +495,18 @@ index 7659cee..37bdeaa 100644
      if (evhtp_unlikely(send(pool->wdr, &cmd, sizeof(cmd), 0) == -1)) {
          return EVTHR_RES_RETRY;
      }
- 
-     return EVTHR_RES_OK;
- #else
-+
-     evthr_t * thr = NULL;
- 
-     if (pool == NULL) {
-@@ -346,16 +553,75 @@ evthr_pool_defer(evthr_pool_t * pool, evthr_cb cb, void * arg) {
+@@ -396,6 +610,9 @@ evthr_pool_defer(evthr_pool_t * pool, evthr_cb cb, void * arg)
          return EVTHR_RES_NOCB;
      }
  
 +    if (pool->dynamic) {
 +        return evthr_pool_dynamic_add(pool, cb, arg);
 +    }
-+
-     thr = TAILQ_FIRST(&pool->threads);
  
-     TAILQ_REMOVE(&pool->threads, thr, next);
-     TAILQ_INSERT_TAIL(&pool->threads, thr, next);
- 
--
-     return evthr_defer(thr, cb, arg);
- #endif
+     TAILQ_FOREACH(thread, &pool->threads, next) {
+         int backlog = get_backlog_(thread);
+@@ -414,6 +631,66 @@ evthr_pool_defer(evthr_pool_t * pool, evthr_cb cb, void * arg)
+     return evthr_defer(min_thread, cb, arg);
  } /* evthr_pool_defer */
  
 +evthr_res
@@ -494,8 +524,8 @@ index 7659cee..37bdeaa 100644
 +
 +static void clear_dead_threads(evthr_pool_t *pool)
 +{
-+    evthr_t * thread = NULL;
-+    evthr_t * save = NULL;
++    evthr_t * thread;
++    evthr_t * save;
 +
 +    TAILQ_FOREACH_SAFE(thread, &pool->dead_threads, next, save) {
 +        TAILQ_REMOVE(&pool->dead_threads, thread, next);
@@ -515,7 +545,10 @@ index 7659cee..37bdeaa 100644
 +    }
 +
 +    for(;;) {
-+        pthread_mutex_lock(&pool->lock);
++        if (pthread_mutex_lock(&pool->lock) < 0) {
++            sleep(1);
++            continue;
++        }
 +
 +        if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
 +            break;
@@ -532,32 +565,23 @@ index 7659cee..37bdeaa 100644
 +
 +        pthread_mutex_unlock(&pool->lock);
 +    }
++    //fprintf(stderr, "exit time clear thread\n");
 +    pthread_exit(NULL);
 +}
 +
  static evthr_pool_t *
  _evthr_pool_new(int           nthreads,
                  evthr_init_cb init_cb,
-@@ -392,7 +658,7 @@ _evthr_pool_new(int           nthreads,
- #endif
- 
-     for (i = 0; i < nthreads; i++) {
--        evthr_t * thread;
-+        evthr_t * thread = NULL;
- 
-         if (!(thread = evthr_wexit_new(init_cb, exit_cb, shared))) {
-             evthr_pool_free(pool);
-@@ -409,6 +675,67 @@ _evthr_pool_new(int           nthreads,
-     return pool;
+@@ -469,6 +746,67 @@ _evthr_pool_new(int           nthreads,
  } /* _evthr_pool_new */
  
-+evthr_pool_t *
+ evthr_pool_t *
 +_evthr_pool_dynamic_new(int nthreads_keep,
 +                                int nthreads_limit, int nrequest_limit,
 +                                evthr_init_cb init_cb, evthr_exit_cb exit_cb,
 +                                void * shared)
 +{
-+    evthr_pool_t * pool = NULL;
++    evthr_pool_t * pool;
 +    int            i;
 +
 +    if (!(pool = calloc(sizeof(evthr_pool_t), 1))) {
@@ -585,7 +609,7 @@ index 7659cee..37bdeaa 100644
 +    TAILQ_INIT(&pool->wait_threads);
 +    TAILQ_INIT(&pool->dead_threads);
 +    TAILQ_INIT(&pool->callbacks);
-+ 
++
 +    if (pthread_mutex_init(&pool->lock, NULL)) {
 +        evthr_pool_free(pool);
 +        return NULL;
@@ -612,10 +636,11 @@ index 7659cee..37bdeaa 100644
 +    return pool;
 +}
 +
- evthr_pool_t *
- evthr_pool_new(int nthreads, evthr_init_cb init_cb, void * shared) {
++evthr_pool_t *
+ evthr_pool_new(int nthreads, evthr_init_cb init_cb, void * shared)
+ {
      return _evthr_pool_new(nthreads, init_cb, NULL, shared);
-@@ -421,6 +748,15 @@ evthr_pool_wexit_new(int nthreads,
+@@ -482,6 +820,15 @@ evthr_pool_wexit_new(int nthreads,
      return _evthr_pool_new(nthreads, init_cb, exit_cb, shared);
  }
  
@@ -629,23 +654,25 @@ index 7659cee..37bdeaa 100644
 +}
 +
  int
- evthr_pool_start(evthr_pool_t * pool) {
-     evthr_t * evthr = NULL;
-@@ -439,3 +775,56 @@ evthr_pool_start(evthr_pool_t * pool) {
+ evthr_pool_start(evthr_pool_t * pool)
+ {
+@@ -501,3 +848,65 @@ evthr_pool_start(evthr_pool_t * pool)
  
      return 0;
  }
 +
 +evthr_res
 +evthr_pool_dynamic_add(evthr_pool_t * pool, evthr_cb cb, void * arg) {
-+    evthr_pool_cb_t * callback = NULL;
-+    evthr_t * thread = NULL;
++    evthr_pool_cb_t *callback;
++    evthr_t * thread;
 +
 +    if (pool == NULL) {
 +       return EVTHR_RES_FATAL;
 +    }
 +
-+    pthread_mutex_lock(&pool->lock);
++    if (pthread_mutex_lock(&pool->lock) < 0) {
++        return EVTHR_RES_FATAL;
++    }
 +
 +    if (pool->nrequest >= pool->nrequest_limit) {
 +        pthread_mutex_unlock(&pool->lock);
@@ -666,18 +693,16 @@ index 7659cee..37bdeaa 100644
 +
 +    if (pool->nthreads_wait == 0 && pool->nthreads_now < pool->nthreads_limit) {
 +        if (!(thread = evthr_wexit_new(pool->init_cb, pool->exit_cb, pool->shared))) {
-+            pthread_mutex_unlock(&pool->lock);
-+            return EVTHR_RES_FATAL;
++            goto release_out;
 +        }
 +
 +        thread->pool = pool;
 +
 +        if (evthr_dynamic_start(thread) < 0) {
-+            evthr_free(thread);
-+            pthread_mutex_unlock(&pool->lock);
-+            return EVTHR_RES_FATAL;
++            goto release_out;
 +        }
 +        pool->nthreads_now++;
++        //fprintf(stderr, "create thread:%d,%p\n", pool->nthreads_now, thread);
 +    } else {
 +        pthread_cond_signal(&pool->wait_cv);
 +    }
@@ -686,5 +711,17 @@ index 7659cee..37bdeaa 100644
 +
 +    pthread_mutex_unlock(&pool->lock);
 +    return EVTHR_RES_OK;
++release_out:
++    evthr_free(thread);
++    TAILQ_REMOVE(&pool->callbacks, callback, next);
++    pool->nrequest--;
++    callback->func = NULL;
++    callback->arg = NULL;
++    free(callback);
++    pthread_mutex_unlock(&pool->lock);
++    return EVTHR_RES_FATAL;
 +}
 +
+-- 
+1.8.3.1
+

@@ -1,0 +1,25 @@
+From f51b2b35b7249469b63039ae7af4922b7292b349 Mon Sep 17 00:00:00 2001
+From: chenxin <kepler.chenxin@huawei.com>
+Date: Wed, 4 Sep 2019 15:53:53 +0800
+Subject: [PATCH 3/4] close open ssl. we do NOT use it in lcrd.
+
+Change-Id: Ib2647c66e7c246b215f827ce76438a9b544b796b
+Signed-off-by: chenxin <kepler.chenxin@huawei.com>
+---
+ cmake/options.cmake | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cmake/options.cmake b/cmake/options.cmake
+index f7d6f22..1738642 100644
+--- a/cmake/options.cmake
++++ b/cmake/options.cmake
+@@ -1,5 +1,5 @@
+ # -DEVHTP_DISABLE_SSL=ON
+-option (EVHTP_DISABLE_SSL   "Disable ssl support"          OFF)
++option (EVHTP_DISABLE_SSL   "Disable ssl support"          ON)
+ 
+ # -DEVHTP_DISABLE_EVTHR=ON
+ option (EVHTP_DISABLE_EVTHR "Disable evthread support"     OFF)
+-- 
+1.8.3.1
+
