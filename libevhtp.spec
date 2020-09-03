@@ -1,11 +1,11 @@
 Name:     	libevhtp
 Version:  	1.2.18
-Release:  	1
+Release:  	2
 Summary:  	Libevent based HTTP API.
 
 License:  	BSD3
-URL:      	https://criticalstack.com
-Source0:  	%{name}-%{version}.tar.gz
+URL:      	https://github.com
+Source0:  	https://github.com/criticalstack/libevhtp/archive/1.2.18.tar.gz
 Patch9000:  0001-decrease-numbers-of-fd-for-shared-pipe-mode.patch
 Patch9001:  0002-evhtp-enable-dynamic-thread-pool.patch
 Patch9002:  0003-close-open-ssl.-we-do-NOT-use-it-in-lcrd.patch
@@ -63,6 +63,12 @@ find %{buildroot} -name '*.cmake' -exec rm -f {} ';'
 /usr/lib/pkgconfig/evhtp.pc
 
 %changelog
+* Tue Sep 01 2020 openeuler Buildteam <buildteam@openeuler.org> - 1.2.18-2
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: modify source0 address
+
 * Wed Apr 15 2020 openEuler Buildteam <buildteam@openeuler.org> - 1.2.18-1
 - Package init
 
