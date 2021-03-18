@@ -1,3 +1,5 @@
+%global debug_package %{nil}
+
 Name:     	libevhtp
 Version:  	1.2.18
 Release:  	3
@@ -10,6 +12,7 @@ Patch9000:  0001-decrease-numbers-of-fd-for-shared-pipe-mode.patch
 Patch9001:  0002-evhtp-enable-dynamic-thread-pool.patch
 Patch9002:  0003-close-open-ssl.-we-do-NOT-use-it-in-lcrd.patch
 Patch9003:  0004-Use-shared-library-instead-static-one.patch
+Patch9004:  0005-libevhtp-add-securce-compile-options.patch
 
 BuildRequires: 	git gcc-c++ cmake libevent-devel
 
@@ -28,8 +31,6 @@ Requires: 	%{name} = %{version}-%{release}
 %{name}-devel contains the header files for developing
 applications that want to make use of %{name}.
 
-%global debug_package %{nil}
-
 %prep
 %autosetup -n %{name}-%{version} -p1
 
@@ -46,6 +47,7 @@ cd build
 
 %delete_la_and_a
 find %{buildroot} -name '*.cmake' -exec rm -f {} ';'
+find %{buildroot} -name '*.so.*' -exec strip {} ';'
 
 %ldconfig_scriptlets
 
@@ -63,7 +65,13 @@ find %{buildroot} -name '*.cmake' -exec rm -f {} ';'
 /usr/lib/pkgconfig/evhtp.pc
 
 %changelog
-* Mon Feb 08 2020 openeuler Buildteam <buildteam@openeuler.org> - 1.2.18-3
+* Fri Mar 19 2021 wujing <wujing50@huawei.com> - 1.2.18-3
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add secure compile options
+
+* Tue Sep 01 2020 openeuler Buildteam <buildteam@openeuler.org> - 1.2.18-2
 - Type:enhancement
 - ID:NA
 - SUG:NA
