@@ -1,0 +1,46 @@
+From cb1d37837d76928670c414d3b498d898ee0b32ae Mon Sep 17 00:00:00 2001
+From: wujing <wujing50@huawei.com>
+Date: Tue, 16 Mar 2021 10:37:07 +0800
+Subject: [PATCH] libevhtp: add securce compile options
+
+Signed-off-by: wujing <wujing50@huawei.com>
+---
+ CMakeLists.txt      | 7 ++++++-
+ cmake/options.cmake | 3 +++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fbb0f50..5bc89d5 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -110,7 +110,12 @@ elseif(EVHTP_ALLOCATOR STREQUAL "tcmalloc")
+     endif()
+ endif()
+ 
+-add_library(evhtp SHARED ${LIBEVHTP_SOURCE_FILES})
++if (NOT EVHTP_BUILD_SHARED)
++    add_library(evhtp ${LIBEVHTP_SOURCE_FILES})
++else()
++    add_library(evhtp SHARED ${LIBEVHTP_SOURCE_FILES})
++    target_link_options(evhtp PUBLIC "-Wl,-z,now -s")
++endif()
+ target_link_libraries(evhtp PUBLIC ${LIBEVHTP_EXTERNAL_LIBS})
+ target_include_directories(evhtp PUBLIC ${LIBEVHTP_EXTERNAL_INCLUDES})
+ 
+diff --git a/cmake/options.cmake b/cmake/options.cmake
+index 1738642..e781110 100644
+--- a/cmake/options.cmake
++++ b/cmake/options.cmake
+@@ -11,6 +11,9 @@ option (EVHTP_DISABLE_REGEX "Disable regex support"        OFF)
+ # -DEVHTP_DEBUG=ON
+ option (EVHTP_DEBUG         "Enable verbose debug logging"     OFF)
+ 
++# -DEVHTP_BUILD_SHARED=ON
++option (EVHTP_BUILD_SHARED  "Build shared libraries"       OFF)
++
+ # can be overwritten by new set_alloc functions
+ set(EVHTP_ALLOCATOR CACHE STRING "Allocator library")
+ set_property(CACHE EVHTP_ALLOCATOR PROPERTY STRINGS "jemalloc;tcmalloc")
+-- 
+2.29.2
+
