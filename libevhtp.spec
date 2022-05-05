@@ -2,7 +2,7 @@
 
 Name:     	libevhtp
 Version:  	1.2.18
-Release:  	3
+Release:  	4
 Summary:  	Libevent based HTTP API.
 
 License:  	BSD 3-Clause
@@ -65,6 +65,12 @@ find %{buildroot} -name '*.so.*' -exec strip {} ';'
 /usr/lib/pkgconfig/evhtp.pc
 
 %changelog
+* Thu May 05 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.2.18-4
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: update release
+
 * Fri Mar 19 2021 wujing <wujing50@huawei.com> - 1.2.18-3
 - Type:enhancement
 - ID:NA
