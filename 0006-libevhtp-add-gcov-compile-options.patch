@@ -1,0 +1,143 @@
+From c5845d807bd88118bb5974ce08c469cfe6c6d258 Mon Sep 17 00:00:00 2001
+From: songbuhuang <544824346@qq.com>
+Date: Thu, 10 Nov 2022 16:17:53 +0800
+Subject: [PATCH] libevhtp add gcov compile options
+
+Signed-off-by: songbuhuang <544824346@qq.com>
+---
+ CMakeLists.txt                        | 12 ++++++++++++
+ examples/example_basic.c              |  7 +++++--
+ examples/example_chunked.c            |  9 +++++----
+ examples/example_pause.c              |  4 ++++
+ examples/example_request_fini.c       |  4 ++++
+ examples/example_vhost.c              |  4 ++++
+ examples/https/example_https_server.c |  7 +++++--
+ 7 files changed, 39 insertions(+), 8 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 5bc89d5..d4596f6 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -64,6 +64,17 @@ set(evhtp_dir_headers
+   "include/evhtp/parser.h"
+   "include/evhtp/log.h")
+ 
++if(ENABLE_GCOV)
++    MESSAGE(STATUS "Enable coverage compile option")
++    set(COVERAGE_C_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage -fkeep-static-functions -fkeep-inline-functions")
++    set(COVERAGE_CXX_OPTION "${COVERAGE_OPTION} -fprofile-arcs -ftest-coverage")
++endif(ENABLE_GCOV)
++
++if(CMAKE_BUILD_TYPE STREQUAL Debug)
++    SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${COVERAGE_C_OPTION}")
++    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${COVERAGE_CXX_OPTION}")
++endif()
++  
+ if(NOT EVHTP_DISABLE_SSL)
+     find_package(OpenSSL)
+     if(OPENSSL_FOUND)
+@@ -334,6 +345,7 @@ message(STATUS "${Blue}CMAKE_SYSTEM_VERSION${ColourReset}     : " ${CMAKE_SYSTEM
+ message(STATUS "${Blue}CMAKE_C_COMPILER${ColourReset}         : " ${CMAKE_C_COMPILER})
+ message(STATUS "${Blue}CMAKE_AR${ColourReset}                 : " ${CMAKE_AR})
+ message(STATUS "${Blue}CMAKE_RANLIB${ColourReset}             : " ${CMAKE_RANLIB})
++message(STATUS "${Blue}COVERAGE_C_OPTION${ColourReset}        : " ${COVERAGE_C_OPTION})
+ message(STATUS "${Blue}CFLAGS${ColourReset}                   :   ${CMAKE_C_FLAGS}")
+ 
+ if(CMAKE_BUILD_TYPE MATCHES Debug)
+diff --git a/examples/example_basic.c b/examples/example_basic.c
+index 9948152..a2f0c18 100644
+--- a/examples/example_basic.c
++++ b/examples/example_basic.c
+@@ -43,6 +43,9 @@ main(int argc, char ** argv)
+ 
+     log_info("Basic server, run: curl http://127.0.0.1:%d/",
+             bind__sock_port0_(htp));
+-    event_base_loop(evbase, 0);
+-    return 0;
++    struct timeval ten_sec;
++    ten_sec.tv_sec = 10;
++    ten_sec.tv_usec = 0;
++    event_base_loopexit(evbase, &ten_sec);
++    return event_base_loop(evbase, 0);
+ }
+diff --git a/examples/example_chunked.c b/examples/example_chunked.c
+index cfab23d..6289286 100644
+--- a/examples/example_chunked.c
++++ b/examples/example_chunked.c
+@@ -157,8 +157,9 @@ main(int argc, char ** argv)
+ 
+     log_info("curl http://127.0.0.1:%d/", bind__sock_port0_(htp));
+ 
+-    event_base_loop(evbase, 0);
+-
+-
+-    return 0;
++    struct timeval ten_sec;
++    ten_sec.tv_sec = 10;
++    ten_sec.tv_usec = 0;
++    event_base_loopexit(evbase, &ten_sec);
++    return event_base_loop(evbase, 0);
+ }
+diff --git a/examples/example_pause.c b/examples/example_pause.c
+index 0cccac2..8293e0e 100644
+--- a/examples/example_pause.c
++++ b/examples/example_pause.c
+@@ -106,5 +106,9 @@ main(int argc, char ** argv) {
+     log_info("response delayed for 10s: "
+              "curl http://127.0.0.1:%d/", bind__sock_port0_(htp));
+ 
++    struct timeval sec;
++    sec.tv_sec = 15;
++    sec.tv_usec = 0;
++    event_base_loopexit(evbase, &sec);
+     return event_base_loop(evbase, 0);
+ }
+diff --git a/examples/example_request_fini.c b/examples/example_request_fini.c
+index d4d6da6..46a1fce 100644
+--- a/examples/example_request_fini.c
++++ b/examples/example_request_fini.c
+@@ -59,5 +59,9 @@ main(int argc, char ** argv) {
+              GENCHAR(), GENCHAR(), GENCHAR());
+ 
+ 
++    struct timeval ten_sec;
++    ten_sec.tv_sec = 10;
++    ten_sec.tv_usec = 0;
++    event_base_loopexit(evbase, &ten_sec);
+     return event_base_loop(evbase, 0);
+ }
+diff --git a/examples/example_vhost.c b/examples/example_vhost.c
+index 3b6881c..76116e8 100644
+--- a/examples/example_vhost.c
++++ b/examples/example_vhost.c
+@@ -112,5 +112,9 @@ main(int argc, char ** argv) {
+         log_info("curl -H'Host: gmail.google.com' http://127.0.0.1:%d/vhost", port);
+     }
+ 
++    struct timeval ten_sec;
++    ten_sec.tv_sec = 10;
++    ten_sec.tv_usec = 0;
++    event_base_loopexit(evbase, &ten_sec);
+     return event_base_loop(evbase, 0);
+ } /* main */
+diff --git a/examples/https/example_https_server.c b/examples/https/example_https_server.c
+index 3e020b2..0dc5afd 100644
+--- a/examples/https/example_https_server.c
++++ b/examples/https/example_https_server.c
+@@ -252,8 +252,11 @@ main(int argc, char ** argv) {
+ 
+     log_info("curl https://127.0.0.1:4443/");
+ 
+-    event_base_loop(evbase, 0);
+-    return 0;
++    struct timeval ten_sec;
++    ten_sec.tv_sec = 10;
++    ten_sec.tv_usec = 0;
++    event_base_loopexit(evbase, &ten_sec);
++    return event_base_loop(evbase, 0);
+ #else
+     log_error("Not compiled with SSL support, go away");
+     return EXIT_FAILURE;
+-- 
+2.25.1
+
