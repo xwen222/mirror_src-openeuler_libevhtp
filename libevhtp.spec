@@ -2,7 +2,7 @@
 
 Name:     	libevhtp
 Version:  	1.2.18
-Release:  	5
+Release:  	6
 Summary:  	Libevent based HTTP API.
 
 License:  	BSD-3-Clause
@@ -13,6 +13,7 @@ Patch9001:  0002-evhtp-enable-dynamic-thread-pool.patch
 Patch9002:  0003-close-open-ssl.-we-do-NOT-use-it-in-lcrd.patch
 Patch9003:  0004-Use-shared-library-instead-static-one.patch
 Patch9004:  0005-libevhtp-add-securce-compile-options.patch
+Patch9005:  0006-libevhtp-add-gcov-compile-options.patch
 
 BuildRequires: 	git gcc-c++ cmake libevent-devel
 
@@ -65,6 +66,12 @@ find %{buildroot} -name '*.so.*' -exec strip {} ';'
 /usr/lib/pkgconfig/evhtp.pc
 
 %changelog
+* Thu Nov 08 2022 huangsong <huangsong14@huawei.com> - 1.2.18-6
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC: add gcov compile options
+
 * Thu Jul 28 2022 fushanqing <fushanqing@kylinos.cn> - 1.2.18-5
 - Unified license name specification
 
