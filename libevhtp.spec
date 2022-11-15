@@ -2,10 +2,10 @@
 
 Name:     	libevhtp
 Version:  	1.2.18
-Release:  	5
+Release:  	6
 Summary:  	Libevent based HTTP API.
 
-License:  	BSD3
+License:  	BSD-3-Clause
 URL:      	https://github.com
 Source0:  	https://github.com/criticalstack/libevhtp/archive/1.2.18.tar.gz
 Patch9000:  0001-decrease-numbers-of-fd-for-shared-pipe-mode.patch
@@ -66,11 +66,14 @@ find %{buildroot} -name '*.so.*' -exec strip {} ';'
 /usr/lib/pkgconfig/evhtp.pc
 
 %changelog
-* Thu Nov 08 2022 huangsong <huangsong14@huawei.com> - 1.2.18-5
+* Thu Nov 08 2022 huangsong <huangsong14@huawei.com> - 1.2.18-6
 - Type:enhancement
 - ID:NA
 - SUG:NA
 - DESC: add gcov compile options
+
+* Thu Jul 28 2022 fushanqing <fushanqing@kylinos.cn> - 1.2.18-5
+- Unified license name specification
 
 * Thu May 05 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.2.18-4
 - Type:enhancement
